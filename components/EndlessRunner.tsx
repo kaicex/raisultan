@@ -934,6 +934,17 @@ export default function EndlessRunner() {
                     @rai5ultan
                   </a>
                 </p>
+                <p className="mt-2">
+                  Курс:{' '}
+                  <a
+                    href="http://praxiscode.io"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-amber-300 underline underline-offset-4"
+                  >
+                    praxiscode.io
+                  </a>
+                </p>
               </div>
               <button
                 type="button"
