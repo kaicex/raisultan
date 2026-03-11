@@ -19,17 +19,19 @@ export default function Icon() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'linear-gradient(135deg, #07111f 0%, #1a4832 100%)',
           borderRadius: '8px',
         }}
       >
         <div
           style={{
             display: 'flex',
-            fontSize: '20px',
+            fontSize: '18px',
+            color: '#f8fafc',
+            fontWeight: 800,
           }}
         >
-          🏃
+          PX
         </div>
       </div>
     ),
