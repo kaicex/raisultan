@@ -1,5 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { Caveat } from "next/font/google";
 import "./globals.css";
+
+const caveat = Caveat({
+  subsets: ["latin", "cyrillic"],
+  weight: ["600", "700"],
+  variable: "--font-handwritten",
+});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -36,7 +43,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={caveat.variable}>{children}</body>
     </html>
   );
 }

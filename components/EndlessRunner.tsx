@@ -86,8 +86,15 @@ const progressMessages = [
   'Нормально идешь. Не сбавляй.',
 ];
 
+const playlist = [
+  { src: '/mus1.mp3', label: 'mus1' },
+  { src: '/mus2.mp3', label: 'mus2' },
+  { src: '/mus3.mp3', label: 'mus3' },
+];
+
 export default function EndlessRunner() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const assetsRef = useRef<LoadedAssets>({
     player: null,
     gifts: {},
@@ -97,6 +104,9 @@ export default function EndlessRunner() {
   const [highScore, setHighScore] = useState(0);
   const [giftCount, setGiftCount] = useState(0);
   const [message, setMessage] = useState('Помоги Праксису залететь. Внутри есть подарки, но сначала добеги до них.');
+  const [currentTrack, setCurrentTrack] = useState(0);
+  const [musicEnabled, setMusicEnabled] = useState(true);
+  const [musicStarted, setMusicStarted] = useState(false);
 
   const gameRef = useRef({
     player: {
@@ -554,6 +564,56 @@ export default function EndlessRunner() {
     };
   }, [gameState, highScore]);
 
+  useEffect(() => {
+    const audio = new Audio(playlist[currentTrack].src);
+    audio.loop = true;
+    audio.volume = 0.45;
+    audio.muted = !musicEnabled;
+    audioRef.current = audio;
+
+    if (musicStarted) {
+      void audio.play().catch(() => undefined);
+    }
+
+    return () => {
+      audio.pause();
+      audioRef.current = null;
+    };
+  }, [currentTrack]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.muted = !musicEnabled;
+    if (musicEnabled && musicStarted) {
+      void audio.play().catch(() => undefined);
+    }
+  }, [musicEnabled, musicStarted]);
+
+  const ensureMusicStarted = () => {
+    if (!musicEnabled) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!musicStarted) {
+      setMusicStarted(true);
+    }
+    void audio.play().catch(() => undefined);
+  };
+
+  const handlePrevTrack = () => {
+    setCurrentTrack((prev) => (prev - 1 + playlist.length) % playlist.length);
+    setMusicStarted(true);
+  };
+
+  const handleNextTrack = () => {
+    setCurrentTrack((prev) => (prev + 1) % playlist.length);
+    setMusicStarted(true);
+  };
+
+  const handleToggleMusic = () => {
+    setMusicEnabled((prev) => !prev);
+  };
+
   const resetRun = () => {
     const game = gameRef.current;
     game.score = 0;
@@ -577,6 +637,7 @@ export default function EndlessRunner() {
 
   const handleJump = () => {
     const game = gameRef.current;
+    ensureMusicStarted();
 
     if (gameState === 'start') {
       resetRun();
@@ -626,21 +687,104 @@ export default function EndlessRunner() {
 
   return (
     <div className="relative h-screen w-full overflow-hidden">
-      <div className="absolute left-0 right-0 top-0 z-20 px-3 pt-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-white/8 bg-slate-950/72 px-4 py-3 backdrop-blur">
-          <div className="min-w-[240px]">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-amber-300/80">Happy Birthday, Raisultan</p>
-            <p className="mt-1 text-[11px] uppercase tracking-[0.24em] text-emerald-300/70">Praxis Run</p>
-            <p className="mt-1 text-sm text-slate-300 md:text-base">{message}</p>
-          </div>
-          <div className="flex gap-3">
-            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-center">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-100/70">Хайп Праксиса</p>
-              <p className="mt-1 text-2xl font-black text-white">{score}</p>
+      <div className="absolute left-0 right-0 top-0 z-20 px-2 pt-2 md:px-3 md:pt-3">
+        <div className="rounded-[16px] border border-white/8 bg-slate-950/72 px-3 py-2 backdrop-blur md:rounded-[18px] md:px-4 md:py-3">
+          <div className="md:flex md:items-center md:justify-between md:gap-3">
+            <div className="min-w-0 md:min-w-[240px] md:flex-1">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 md:text-[11px] md:tracking-[0.24em]">
+              Happy Birthday, Raisultan
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2 md:gap-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-300/70 md:text-[11px] md:tracking-[0.24em]">
+                Praxis Run
+              </p>
+              <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400 md:text-[11px] md:tracking-[0.24em]">
+                11.03.26
+              </p>
             </div>
-            <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-center">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-amber-100/70">Лучший забег</p>
-              <p className="mt-1 text-2xl font-black text-white">{highScore}</p>
+            <p className="mt-1 max-w-[260px] text-xs text-slate-300 md:max-w-none md:text-base">{message}</p>
+            </div>
+            <div className="hidden md:flex md:flex-wrap md:items-center md:justify-end md:gap-3">
+              <div className="flex h-12 items-center gap-2 rounded-2xl border border-white/8 bg-white/5 px-3 py-2">
+                <button
+                  type="button"
+                  onClick={handlePrevTrack}
+                  className="rounded-full border border-white/10 px-2 py-1 text-xs text-slate-200 transition hover:bg-white/10"
+                  aria-label="Previous track"
+                >
+                  ◀
+                </button>
+                <div className="min-w-[56px] text-center text-xs uppercase tracking-[0.18em] text-slate-300">
+                  {playlist[currentTrack].label}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleNextTrack}
+                  className="rounded-full border border-white/10 px-2 py-1 text-xs text-slate-200 transition hover:bg-white/10"
+                  aria-label="Next track"
+                >
+                  ▶
+                </button>
+                <button
+                  type="button"
+                  onClick={handleToggleMusic}
+                  className="rounded-full border border-white/10 px-2 py-1 text-xs text-slate-200 transition hover:bg-white/10"
+                  aria-label="Toggle music"
+                >
+                  {musicEnabled ? '♪' : '×'}
+                </button>
+              </div>
+              <div className="flex h-12 min-w-[92px] flex-col items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-100/70">Хайп</p>
+                <p className="mt-1 text-2xl font-black text-white">{score}</p>
+              </div>
+              <div className="flex h-12 min-w-[92px] flex-col items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-center">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-amber-100/70">Рекорд</p>
+                <p className="mt-1 text-2xl font-black text-white">{highScore}</p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-2 flex flex-wrap items-stretch justify-between gap-2 md:hidden">
+            <div className="flex h-10 flex-1 items-center justify-center gap-1 rounded-xl border border-white/8 bg-white/5 px-2 py-1.5">
+              <button
+                type="button"
+                onClick={handlePrevTrack}
+                className="rounded-full border border-white/10 px-1.5 py-1 text-[10px] text-slate-200 transition hover:bg-white/10"
+                aria-label="Previous track"
+              >
+                ◀
+              </button>
+              <div className="min-w-[42px] text-center text-[10px] uppercase tracking-[0.12em] text-slate-300">
+                {playlist[currentTrack].label}
+              </div>
+              <button
+                type="button"
+                onClick={handleNextTrack}
+                className="rounded-full border border-white/10 px-1.5 py-1 text-[10px] text-slate-200 transition hover:bg-white/10"
+                aria-label="Next track"
+              >
+                ▶
+              </button>
+              <button
+                type="button"
+                onClick={handleToggleMusic}
+                className="rounded-full border border-white/10 px-1.5 py-1 text-[10px] text-slate-200 transition hover:bg-white/10"
+                aria-label="Toggle music"
+              >
+                {musicEnabled ? '♪' : '×'}
+              </button>
+            </div>
+            <div className="flex h-10 min-w-[72px] flex-col items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-center">
+              <p className="text-[9px] uppercase tracking-[0.12em] text-emerald-100/70">
+                Хайп
+              </p>
+              <p className="mt-1 text-lg font-black text-white">{score}</p>
+            </div>
+            <div className="flex h-10 min-w-[72px] flex-col items-center justify-center rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-center">
+              <p className="text-[9px] uppercase tracking-[0.12em] text-amber-100/70">
+                Рекорд
+              </p>
+              <p className="mt-1 text-lg font-black text-white">{highScore}</p>
             </div>
           </div>
         </div>
@@ -686,9 +830,10 @@ export default function EndlessRunner() {
                 {didWin ? 'С днюхой, Райсултан' : 'Праксису нужен еще один забег'}
               </h2>
               {didWin && (
-                <p className="mt-3 text-lg font-medium text-emerald-300">
-                  Это мое маленькое поздравление для тебя, брат.
-                </p>
+                <div className="mt-3">
+                  <p className="text-lg font-medium text-emerald-300">Это мое маленькое поздравление для тебя, брат.</p>
+                  <p className="handwritten mt-2 text-4xl leading-none text-amber-200">Люблю, брат.</p>
+                </div>
               )}
               <p className="mt-4 text-slate-300">{message}</p>
               <div className="mt-6 grid gap-3 text-left sm:grid-cols-2">
