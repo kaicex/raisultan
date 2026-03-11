@@ -31,6 +31,11 @@ interface Gift {
   bob: number;
 }
 
+interface LoadedAssets {
+  player: HTMLImageElement | null;
+  gifts: Partial<Record<GiftType, HTMLImageElement>>;
+}
+
 const hazardLabels: Record<HazardType, string> = {
   bug: 'БАГ',
   deadline: 'ДЕДЛАЙН',
@@ -51,6 +56,13 @@ const giftTitles: Record<GiftType, string> = {
   premium: 'Telegram Premium',
   claude: 'Claude Code Max',
   dota: '100 часов Доты со мной',
+};
+
+const giftImageSrc: Record<GiftType, string> = {
+  redesign: '/Kai.png',
+  premium: '/telegram.png',
+  claude: '/Claude.png',
+  dota: '/Dota.png',
 };
 
 const giftColors: Record<GiftType, string> = {
@@ -76,6 +88,10 @@ const progressMessages = [
 
 export default function EndlessRunner() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const assetsRef = useRef<LoadedAssets>({
+    player: null,
+    gifts: {},
+  });
   const [gameState, setGameState] = useState<'start' | 'playing' | 'gameOver'>('start');
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
@@ -86,8 +102,8 @@ export default function EndlessRunner() {
     player: {
       x: 100,
       y: 0,
-      width: 44,
-      height: 56,
+      width: 60,
+      height: 78,
       velocityY: 0,
       isJumping: false,
       rotation: 0,
@@ -96,11 +112,11 @@ export default function EndlessRunner() {
     gifts: [] as Gift[],
     particles: [] as Particle[],
     ground: 400,
-    gravity: 0.72,
-    jumpStrength: -17,
-    gameSpeed: 6.1,
+    gravity: 0.66,
+    jumpStrength: -16.5,
+    gameSpeed: 4.8,
     obstacleTimer: 0,
-    obstacleInterval: 92,
+    obstacleInterval: 120,
     giftTimer: 0,
     giftInterval: 240,
     score: 0,
@@ -117,8 +133,8 @@ export default function EndlessRunner() {
     if (!ctx) return;
 
     const updateCanvasSize = () => {
-      canvas.width = Math.min(1180, window.innerWidth - 24);
-      canvas.height = 540;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
       gameRef.current.ground = canvas.height - 110;
       gameRef.current.player.y = gameRef.current.ground - gameRef.current.player.height;
     };
@@ -132,6 +148,38 @@ export default function EndlessRunner() {
     }
 
     let animationId: number;
+
+    const loadImage = (src: string) =>
+      new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = src;
+      });
+
+    void Promise.allSettled([
+      loadImage('/Man.png'),
+      loadImage('/Kai.png'),
+      loadImage('/telegram.png'),
+      loadImage('/Claude.png'),
+      loadImage('/Dota.png'),
+    ]).then(([player, kai, telegram, claude, dota]) => {
+      if (player.status === 'fulfilled') {
+        assetsRef.current.player = player.value;
+      }
+      if (kai.status === 'fulfilled') {
+        assetsRef.current.gifts.redesign = kai.value;
+      }
+      if (telegram.status === 'fulfilled') {
+        assetsRef.current.gifts.premium = telegram.value;
+      }
+      if (claude.status === 'fulfilled') {
+        assetsRef.current.gifts.claude = claude.value;
+      }
+      if (dota.status === 'fulfilled') {
+        assetsRef.current.gifts.dota = dota.value;
+      }
+    });
 
     const drawCard = (x: number, y: number, width: number, height: number, colorTop: string, colorBottom: string) => {
       const gradient = ctx.createLinearGradient(x, y, x, y + height);
@@ -147,6 +195,7 @@ export default function EndlessRunner() {
       const bobOffset = Math.sin(gameRef.current.animationFrame * 0.08 + gift.bob) * 6;
       const drawY = gift.y + bobOffset;
       const color = giftColors[gift.type];
+      const giftImage = assetsRef.current.gifts[gift.type];
 
       ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
       ctx.beginPath();
@@ -156,16 +205,23 @@ export default function EndlessRunner() {
       drawCard(gift.x, drawY, gift.width, gift.height, color, '#111827');
       ctx.strokeStyle = 'rgba(255,255,255,0.35)';
       ctx.lineWidth = 2;
-      ctx.stroke();
+      ctx.strokeRect(gift.x, drawY, gift.width, gift.height);
 
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 15px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(giftLabels[gift.type], gift.x + gift.width / 2, drawY + 26);
+      if (giftImage) {
+        const imageSize = Math.min(gift.width - 10, gift.height - 10);
+        const imageX = gift.x + (gift.width - imageSize) / 2;
+        const imageY = drawY + (gift.height - imageSize) / 2;
+        ctx.drawImage(giftImage, imageX, imageY, imageSize, imageSize);
+      } else {
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 15px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(giftLabels[gift.type], gift.x + gift.width / 2, drawY + 26);
 
-      ctx.font = '11px Arial';
-      ctx.fillStyle = 'rgba(248,250,252,0.8)';
-      ctx.fillText('подарок', gift.x + gift.width / 2, drawY + 43);
+        ctx.font = '11px Arial';
+        ctx.fillStyle = 'rgba(248,250,252,0.8)';
+        ctx.fillText('подарок', gift.x + gift.width / 2, drawY + 43);
+      }
       ctx.textAlign = 'left';
     };
 
@@ -237,11 +293,14 @@ export default function EndlessRunner() {
         ctx.stroke();
       }
 
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
       ctx.beginPath();
-      ctx.roundRect(18, 18, 260, 70, 18);
+      ctx.roundRect(0, 0, canvas.width, 86, 0);
       ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.beginPath();
+      ctx.moveTo(0, 86);
+      ctx.lineTo(canvas.width, 86);
       ctx.stroke();
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 16px Arial';
@@ -259,13 +318,13 @@ export default function EndlessRunner() {
         player.isJumping = false;
         player.rotation = 0;
       } else {
-        player.rotation += 0.08;
+        player.rotation += 0.2;
       }
 
       ctx.save();
       ctx.fillStyle = 'rgba(2, 6, 23, 0.35)';
       ctx.beginPath();
-      ctx.ellipse(player.x + player.width / 2, ground + 7, 24, 6, 0, 0, Math.PI * 2);
+      ctx.ellipse(player.x + player.width / 2, ground + 9, 30, 8, 0, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
@@ -273,57 +332,31 @@ export default function EndlessRunner() {
         ctx.rotate(player.rotation);
       }
 
-      const hoodieGradient = ctx.createLinearGradient(-18, -28, 18, 28);
-      hoodieGradient.addColorStop(0, '#232634');
-      hoodieGradient.addColorStop(1, '#05070d');
-      ctx.fillStyle = hoodieGradient;
-      ctx.beginPath();
-      ctx.roundRect(-18, -24, 36, 42, 14);
-      ctx.fill();
+      const playerImage = assetsRef.current.player;
+      if (playerImage) {
+        ctx.beginPath();
+        ctx.roundRect(-30, -39, 60, 78, 16);
+        ctx.clip();
+        ctx.drawImage(playerImage, -30, -39, 60, 78);
+      } else {
+        const hoodieGradient = ctx.createLinearGradient(-18, -28, 18, 28);
+        hoodieGradient.addColorStop(0, '#232634');
+        hoodieGradient.addColorStop(1, '#05070d');
+        ctx.fillStyle = hoodieGradient;
+        ctx.beginPath();
+        ctx.roundRect(-18, -24, 36, 42, 14);
+        ctx.fill();
 
-      ctx.fillStyle = '#e6c7b1';
-      ctx.beginPath();
-      ctx.arc(0, -23, 14, 0, Math.PI * 2);
-      ctx.fill();
+        ctx.fillStyle = '#e6c7b1';
+        ctx.beginPath();
+        ctx.arc(0, -23, 14, 0, Math.PI * 2);
+        ctx.fill();
 
-      ctx.fillStyle = '#171717';
-      ctx.beginPath();
-      ctx.ellipse(0, -31, 15, 11, 0, Math.PI, 0, true);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(-13, -29);
-      ctx.quadraticCurveTo(-18, -20, -12, -10);
-      ctx.lineTo(-8, -21);
-      ctx.closePath();
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(13, -29);
-      ctx.quadraticCurveTo(18, -20, 12, -10);
-      ctx.lineTo(8, -21);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(-4, -24, 1.8, 0, Math.PI * 2);
-      ctx.arc(4, -24, 1.8, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = '#96614c';
-      ctx.lineWidth = 1.4;
-      ctx.beginPath();
-      ctx.moveTo(-4, -15);
-      ctx.quadraticCurveTo(0, -12.5, 4, -15);
-      ctx.stroke();
-
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(-10, 18);
-      ctx.lineTo(-14, 28);
-      ctx.moveTo(10, 18);
-      ctx.lineTo(14, 28);
-      ctx.stroke();
+        ctx.fillStyle = '#171717';
+        ctx.beginPath();
+        ctx.ellipse(0, -31, 15, 11, 0, Math.PI, 0, true);
+        ctx.fill();
+      }
 
       ctx.restore();
 
@@ -346,8 +379,8 @@ export default function EndlessRunner() {
           height = 68;
           width = 60;
         } else if (type === 'mentor') {
-          height = 62;
-          width = 76;
+            height = 58;
+            width = 72;
         }
 
         obstacles.push({
@@ -439,8 +472,8 @@ export default function EndlessRunner() {
           setScore(game.score);
 
           if (game.score % 120 === 0) {
-            game.gameSpeed += 0.5;
-            game.obstacleInterval = Math.max(60, game.obstacleInterval - 4);
+            game.gameSpeed += 0.28;
+            game.obstacleInterval = Math.max(88, game.obstacleInterval - 3);
             setMessage(progressMessages[(game.score / 120 - 1) % progressMessages.length]);
           }
         }
@@ -529,8 +562,8 @@ export default function EndlessRunner() {
     game.obstacles = [];
     game.gifts = [];
     game.particles = [];
-    game.gameSpeed = 6.1;
-    game.obstacleInterval = 92;
+    game.gameSpeed = 4.8;
+    game.obstacleInterval = 120;
     game.obstacleTimer = 0;
     game.giftTimer = 0;
     game.player.y = game.ground - game.player.height;
@@ -555,6 +588,7 @@ export default function EndlessRunner() {
       if (!game.player.isJumping) {
         game.player.velocityY = game.jumpStrength;
         game.player.isJumping = true;
+        game.player.rotation = 0.18;
         for (let i = 0; i < 8; i++) {
           game.particles.push({
             x: game.player.x + game.player.width / 2,
@@ -591,22 +625,12 @@ export default function EndlessRunner() {
   const didWin = giftCount === unlockedGiftOrder.length && score >= 240;
 
   return (
-    <div className="flex w-full max-w-[1220px] flex-col items-center justify-center gap-5 px-3 py-6">
-      <div className="text-center">
-        <p className="mb-3 text-sm uppercase tracking-[0.35em] text-emerald-300/80">Днюха билд для Райсултана</p>
-        <h1 className="bg-gradient-to-r from-emerald-300 via-cyan-300 to-amber-300 bg-clip-text text-5xl font-black text-transparent md:text-7xl">
-          Praxis Run
-        </h1>
-        <p className="mx-auto mt-3 max-w-2xl text-balance text-base text-slate-300 md:text-lg">
-          Ты строишь Праксис. Нужно допрыгать до популярности, пережить баги и дедлайны. Внутри
-          есть подарки, но сначала добеги до финиша.
-        </p>
-      </div>
-
-      <div className="w-full rounded-[28px] border border-white/10 bg-slate-950/70 p-3 shadow-[0_20px_80px_rgba(8,15,28,0.45)] backdrop-blur">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-white/8 bg-white/[0.03] px-4 py-3">
+    <div className="relative h-screen w-full overflow-hidden">
+      <div className="absolute left-0 right-0 top-0 z-20 px-3 pt-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-white/8 bg-slate-950/72 px-4 py-3 backdrop-blur">
           <div className="min-w-[240px]">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-cyan-200/70">Бриф</p>
+            <p className="text-[11px] uppercase tracking-[0.24em] text-amber-300/80">Happy Birthday, Raisultan</p>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.24em] text-emerald-300/70">Praxis Run</p>
             <p className="mt-1 text-sm text-slate-300 md:text-base">{message}</p>
           </div>
           <div className="flex gap-3">
@@ -620,86 +644,122 @@ export default function EndlessRunner() {
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="relative overflow-hidden rounded-[22px] border border-emerald-300/20 bg-slate-950">
-            <canvas
-              ref={canvasRef}
-              onClick={handleJump}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                handleJump();
-              }}
-              className="block cursor-pointer"
-              style={{ maxWidth: '100%', touchAction: 'none' }}
-            />
+      <div className="relative h-screen overflow-hidden bg-slate-950">
+        <canvas
+          ref={canvasRef}
+          onClick={handleJump}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            handleJump();
+          }}
+          className="block h-full w-full cursor-pointer"
+          style={{ touchAction: 'none' }}
+        />
 
-            {gameState === 'start' && (
-              <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.28),transparent_45%),rgba(2,6,23,0.78)]">
-                <div className="max-w-md text-center text-white">
-                  <p className="text-sm uppercase tracking-[0.3em] text-emerald-200/70">Миссия</p>
-                  <h2 className="mt-3 text-4xl font-black">Сделай Праксис популярным</h2>
-                  <p className="mt-4 text-slate-300">
-                    Перепрыгивай баги, дедлайны, плохой UX и скоуп. Внутри тебя ждут подарки, но
-                    заранее не палю. И помни:
-                    главное не отчаиваться.
-                  </p>
-                  <p className="mt-4 text-sm text-slate-400">Подсказка: не все можно решить тем, что покрасить в розовый.</p>
-                  <p className="mt-6 text-sm text-slate-400">Нажми SPACE / W / ↑ или тапни по экрану, чтобы начать.</p>
-                  {highScore > 0 && (
-                    <p className="mt-4 text-lg font-semibold text-amber-300">Лучший хайп Праксиса: {highScore}</p>
+        {gameState === 'start' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.28),transparent_45%),rgba(2,6,23,0.78)] px-4">
+            <div className="max-w-md text-center text-white">
+              <p className="text-sm uppercase tracking-[0.3em] text-emerald-200/70">Миссия</p>
+              <h2 className="mt-3 text-4xl font-black">Сделай Праксис популярным</h2>
+              <p className="mt-4 text-slate-300">
+                Перепрыгивай баги, дедлайны, ресерч, курс и менторство. Внутри тебя ждут подарки,
+                но заранее не палю. Главное не отчаиваться.
+              </p>
+              <p className="mt-4 text-sm text-slate-400">Подсказка: не все можно решить тем, что покрасить в розовый.</p>
+              <p className="mt-6 text-sm text-slate-400">Нажми SPACE / W / ↑ или тапни по экрану, чтобы начать.</p>
+              {highScore > 0 && (
+                <p className="mt-4 text-lg font-semibold text-amber-300">Лучший хайп Праксиса: {highScore}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {gameState === 'gameOver' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[rgba(2,6,23,0.82)] p-4">
+            <div className="w-full max-w-lg rounded-[26px] border border-white/10 bg-slate-950/95 p-7 text-center shadow-2xl">
+              <p className="text-sm uppercase tracking-[0.28em] text-emerald-300/80">
+                {didWin ? 'Победа' : 'Забег прерван'}
+              </p>
+              <h2 className="mt-3 text-4xl font-black text-white">
+                {didWin ? 'С днюхой, Райсултан' : 'Праксису нужен еще один забег'}
+              </h2>
+              {didWin && (
+                <p className="mt-3 text-lg font-medium text-emerald-300">
+                  Это мое маленькое поздравление для тебя, брат.
+                </p>
+              )}
+              <p className="mt-4 text-slate-300">{message}</p>
+              <div className="mt-6 grid gap-3 text-left sm:grid-cols-2">
+                <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/70">Хайп Праксиса</p>
+                  <p className="mt-2 text-3xl font-black text-white">{score}</p>
+                </div>
+                <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-amber-100/70">Лучший забег</p>
+                  <p className="mt-2 text-3xl font-black text-white">{highScore}</p>
+                </div>
+              </div>
+              <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-left">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Выбери один подарок</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {unlockedGifts.length > 0 ? (
+                    unlockedGifts.map((gift) => (
+                      <div
+                        key={gift}
+                        className="overflow-hidden rounded-2xl border border-white/10 bg-white/5"
+                      >
+                        <div className="flex aspect-square items-center justify-center bg-white p-4">
+                          <img
+                            src={giftImageSrc[gift]}
+                            alt={giftTitles[gift]}
+                            className="h-full w-full object-contain"
+                          />
+                        </div>
+                        <div className="border-t border-white/10 px-4 py-3">
+                          <p className="text-sm font-medium leading-snug text-slate-100">{giftTitles[gift]}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-500">Пока ничего не открылось. Соберись и прыгай чище.</p>
                   )}
                 </div>
               </div>
-            )}
-
-            {gameState === 'gameOver' && (
-              <div className="absolute inset-0 flex items-center justify-center bg-[rgba(2,6,23,0.82)] p-4">
-                <div className="w-full max-w-lg rounded-[26px] border border-white/10 bg-slate-950/95 p-7 text-center shadow-2xl">
-                  <p className="text-sm uppercase tracking-[0.28em] text-emerald-300/80">
-                    {didWin ? 'Победа' : 'Забег прерван'}
-                  </p>
-                  <h2 className="mt-3 text-4xl font-black text-white">
-                    {didWin ? 'С днюхой, Райсултан' : 'Праксису нужен еще один забег'}
-                  </h2>
-                  <p className="mt-4 text-slate-300">{message}</p>
-                  <div className="mt-6 grid gap-3 text-left sm:grid-cols-2">
-                    <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/70">Хайп Праксиса</p>
-                      <p className="mt-2 text-3xl font-black text-white">{score}</p>
-                    </div>
-                    <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-amber-100/70">Лучший забег</p>
-                      <p className="mt-2 text-3xl font-black text-white">{highScore}</p>
-                    </div>
-                  </div>
-                  <div className="mt-6 rounded-2xl border border-white/10 bg-slate-900/80 p-4 text-left">
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Выбери один подарок</p>
-                    <div className="mt-3 grid gap-2">
-                      {unlockedGifts.length > 0 ? (
-                        unlockedGifts.map((gift) => (
-                          <div
-                            key={gift}
-                            className="rounded-xl border border-white/8 bg-white/5 px-3 py-2 text-sm text-slate-200"
-                          >
-                            {giftTitles[gift]}
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-slate-500">Пока ничего не открылось. Соберись и прыгай чище.</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left text-sm text-slate-300">
-                    <p>Напоминание:</p>
-                    <p>Ты уже много вывез. Вывезешь и это.</p>
-                    <p>Праксису нужен не идеальный старт, а твой темп.</p>
-                    <p>Выбери один подарок и скинь мне скрин. Потом можно и в дотку.</p>
-                  </div>
-                  <p className="mt-6 text-sm text-slate-400">Нажми SPACE или тапни, чтобы начать заново.</p>
-                </div>
+              <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left text-sm text-slate-300">
+                <p>Напоминание:</p>
+                <p>Ты уже много вывез. Вывезешь и это.</p>
+                <p>Праксису нужен не идеальный старт, а твой темп.</p>
+                <p>Выбери один подарок, заскринь этот экран и отправь мне в лс.</p>
+                <p className="mt-3">
+                  С сердечком от{' '}
+                  <a
+                    href="https://t.me/kaicex"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-emerald-300 underline underline-offset-4"
+                  >
+                    @kaicex
+                  </a>
+                  .
+                </p>
+                <p className="mt-2">
+                  Telegram Райса:{' '}
+                  <a
+                    href="https://t.me/rai5ultan"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-cyan-300 underline underline-offset-4"
+                  >
+                    @rai5ultan
+                  </a>
+                </p>
               </div>
-            )}
-        </div>
+              <p className="mt-6 text-sm text-slate-400">Нажми SPACE или тапни, чтобы начать заново.</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
