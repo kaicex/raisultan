@@ -614,6 +614,11 @@ export default function EndlessRunner() {
     setMusicEnabled((prev) => !prev);
   };
 
+  const handleStartOverlayTap = (e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    handleJump();
+  };
+
   const resetRun = () => {
     const game = gameRef.current;
     game.score = 0;
@@ -664,14 +669,13 @@ export default function EndlessRunner() {
       return;
     }
 
-    if (gameState === 'gameOver') {
-      setGameState('start');
-      resetRun();
-    }
   };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (gameState === 'gameOver') {
+        return;
+      }
       if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
         e.preventDefault();
         handleJump();
@@ -736,11 +740,11 @@ export default function EndlessRunner() {
               </div>
               <div className="flex h-12 min-w-[92px] flex-col items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-center">
                 <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-100/70">Хайп</p>
-                <p className="mt-1 text-2xl font-black text-white">{score}</p>
+                <p className="mt-0.5 text-2xl font-black leading-none text-white">{score}</p>
               </div>
               <div className="flex h-12 min-w-[92px] flex-col items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-center">
                 <p className="text-[10px] uppercase tracking-[0.18em] text-amber-100/70">Рекорд</p>
-                <p className="mt-1 text-2xl font-black text-white">{highScore}</p>
+                <p className="mt-0.5 text-2xl font-black leading-none text-white">{highScore}</p>
               </div>
             </div>
           </div>
@@ -778,13 +782,13 @@ export default function EndlessRunner() {
               <p className="text-[9px] uppercase tracking-[0.12em] text-emerald-100/70">
                 Хайп
               </p>
-              <p className="mt-1 text-lg font-black text-white">{score}</p>
+              <p className="mt-0.5 text-lg font-black leading-none text-white">{score}</p>
             </div>
             <div className="flex h-10 min-w-[72px] flex-col items-center justify-center rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-center">
               <p className="text-[9px] uppercase tracking-[0.12em] text-amber-100/70">
                 Рекорд
               </p>
-              <p className="mt-1 text-lg font-black text-white">{highScore}</p>
+              <p className="mt-0.5 text-lg font-black leading-none text-white">{highScore}</p>
             </div>
           </div>
         </div>
@@ -803,7 +807,11 @@ export default function EndlessRunner() {
         />
 
         {gameState === 'start' && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.28),transparent_45%),rgba(2,6,23,0.78)] px-4">
+          <div
+            className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.28),transparent_45%),rgba(2,6,23,0.78)] px-4"
+            onClick={handleStartOverlayTap}
+            onTouchStart={handleStartOverlayTap}
+          >
             <div className="max-w-md text-center text-white">
               <p className="text-sm uppercase tracking-[0.3em] text-emerald-200/70">Миссия</p>
               <h2 className="mt-3 text-4xl font-black">Сделай Праксис популярным</h2>
@@ -821,8 +829,10 @@ export default function EndlessRunner() {
         )}
 
         {gameState === 'gameOver' && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[rgba(2,6,23,0.82)] p-4">
-            <div className="w-full max-w-lg rounded-[26px] border border-white/10 bg-slate-950/95 p-7 text-center shadow-2xl">
+          <div
+            className="absolute inset-0 overflow-y-auto bg-[rgba(2,6,23,0.82)] px-4 pb-4 pt-24 md:pt-28"
+          >
+            <div className="mx-auto my-8 w-full max-w-lg rounded-[26px] border border-white/10 bg-slate-950/95 p-7 text-center shadow-2xl">
               <p className="text-sm uppercase tracking-[0.28em] text-emerald-300/80">
                 {didWin ? 'Победа' : 'Забег прерван'}
               </p>
@@ -901,7 +911,16 @@ export default function EndlessRunner() {
                   </a>
                 </p>
               </div>
-              <p className="mt-6 text-sm text-slate-400">Нажми SPACE или тапни, чтобы начать заново.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  resetRun();
+                  setGameState('start');
+                }}
+                className="mt-6 inline-flex items-center justify-center rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-5 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-400/20"
+              >
+                Попробовать снова
+              </button>
             </div>
           </div>
         )}
