@@ -820,7 +820,17 @@ export default function EndlessRunner() {
                 но заранее не палю. Главное не отчаиваться.
               </p>
               <p className="mt-4 text-sm text-slate-400">Подсказка: не все можно решить тем, что покрасить в розовый.</p>
-              <p className="mt-6 text-sm text-slate-400">Нажми SPACE / W / ↑ или тапни по экрану, чтобы начать.</p>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleJump();
+                }}
+                className="mt-6 inline-flex items-center justify-center rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-5 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-400/20 md:hidden"
+              >
+                Начать игру
+              </button>
+              <p className="mt-4 text-sm text-slate-400 md:mt-6">Нажми SPACE / W / ↑ или тапни по экрану, чтобы начать.</p>
               {highScore > 0 && (
                 <p className="mt-4 text-lg font-semibold text-amber-300">Лучший хайп Праксиса: {highScore}</p>
               )}
@@ -836,15 +846,29 @@ export default function EndlessRunner() {
               <p className="text-sm uppercase tracking-[0.28em] text-emerald-300/80">
                 {didWin ? 'Победа' : 'Забег прерван'}
               </p>
-              <h2 className="mt-3 text-4xl font-black text-white">
-                {didWin ? 'С днюхой, Райсултан' : 'Праксису нужен еще один забег'}
-              </h2>
-              {didWin && (
-                <div className="mt-3">
-                  <p className="text-lg font-medium text-emerald-300">Это мое маленькое поздравление для тебя, брат.</p>
-                  <p className="handwritten mt-2 text-4xl leading-none text-amber-200">Люблю, брат.</p>
+              <h2 className="mt-3 text-4xl font-black text-white md:text-5xl">Поздравляю, брат!</h2>
+              <div className="relative mx-auto mt-5 max-w-md">
+                <div className="absolute -left-3 top-6 h-5 w-5 rounded-full bg-amber-300 shadow-[0_0_28px_rgba(252,211,77,0.85)]" />
+                <div className="absolute right-3 top-3 h-3 w-3 rounded-full bg-cyan-300 shadow-[0_0_24px_rgba(103,232,249,0.85)]" />
+                <div className="absolute -right-2 top-16 h-4 w-4 rounded-full bg-emerald-300 shadow-[0_0_26px_rgba(110,231,183,0.85)]" />
+                <div className="absolute left-6 bottom-6 h-3 w-3 rounded-full bg-pink-300 shadow-[0_0_20px_rgba(249,168,212,0.8)]" />
+                <div className="absolute -bottom-2 right-8 h-5 w-5 rounded-full bg-orange-300 shadow-[0_0_28px_rgba(253,186,116,0.85)]" />
+                <div className="absolute inset-0 rounded-[34px] bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.18),transparent_45%),radial-gradient(circle_at_bottom,rgba(45,212,191,0.18),transparent_40%)] blur-xl" />
+                <div className="relative overflow-hidden rounded-[32px] border border-white/15 bg-white/[0.04] p-3 shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
+                  <div className="absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full border border-amber-200/30 bg-slate-950/70 px-4 py-1 text-[11px] uppercase tracking-[0.28em] text-amber-200 backdrop-blur">
+                    Happy Birthday
+                  </div>
+                  <img
+                    src="/rais.jpg"
+                    alt="Райсултан"
+                    className="h-auto w-full rounded-[24px] border border-white/10 object-cover"
+                  />
                 </div>
-              )}
+              </div>
+              <div className="mt-4">
+                <p className="text-lg font-medium text-emerald-300">Это мое маленькое поздравление для тебя, брат.</p>
+                <p className="handwritten mt-2 text-4xl leading-none text-amber-200">Люблю, брат.</p>
+              </div>
               <p className="mt-4 text-slate-300">{message}</p>
               <div className="mt-6 grid gap-3 text-left sm:grid-cols-2">
                 <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4">
